@@ -1,0 +1,14 @@
+{
+  "name": "safecity-mk-backend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "SafeChain MK backend API (standalone package.json used for the backend Docker image).",
+  "scripts": {
+    "start": "node src/server.js",
+    "db:seed": "node src/seed-demo.js"
+  },
+  "dependencies": {
+    "mongoose": "^8.9.5"
+  }
+}

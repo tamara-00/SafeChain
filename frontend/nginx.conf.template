@@ -1,0 +1,26 @@
+# Rendered from this .template by nginx's built-in docker-entrypoint
+# envsubst step (see frontend/Dockerfile) into /etc/nginx/conf.d/default.conf
+# at container start. ${BACKEND_HOST} / ${BACKEND_PORT} come from real
+# environment variables (Docker `-e`, a Kubernetes Deployment's env, a
+# Compose service name, ...) instead of a hardcoded IP, so the same image
+# works unchanged across environments.
+server {
+    listen 8080;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location /api/ {
+        proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

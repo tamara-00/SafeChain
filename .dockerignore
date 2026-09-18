@@ -1,0 +1,17 @@
+# Used as the build context root for frontend/Dockerfile (docker build -f frontend/Dockerfile .)
+node_modules
+backend
+dist
+dist-ssr
+.vite
+.git
+.gitignore
+.env
+.env.local
+.env.*.local
+.DS_Store
+*.log
+*.md
+.idea
+Dockerfile
+.dockerignore

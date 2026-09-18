@@ -1,0 +1,16 @@
+node_modules
+dist
+dist-ssr
+.vite
+.DS_Store
+*.local
+*.log
+backend/.data
+node_modules/
+.env
+.DS_Store
+dist/
+build/
+.history/
+.claude/
+.superstack/
