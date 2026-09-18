@@ -1,0 +1,72 @@
+services:
+  mongodb:
+    image: mongo:${MONGO_IMAGE_TAG:-7}
+    container_name: safechain-mongodb
+    restart: unless-stopped
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - safechain-network
+    # Not published by default - only the backend (on the same network) needs it.
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: safechain-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: ${BACKEND_PORT:-8787}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - safechain-network
+    # Not published by default - the frontend reaches it over the internal network via /api.
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8787/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: safechain-frontend
+    restart: unless-stopped
+    environment:
+      BACKEND_HOST: backend
+      BACKEND_PORT: ${BACKEND_PORT:-8787}
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - safechain-network
+    ports:
+      - "${FRONTEND_HOST_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  safechain-network:
+    name: ${COMPOSE_NETWORK_NAME:-safechain-network}
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    name: ${MONGO_VOLUME_NAME:-safechain_mongodb_data}
