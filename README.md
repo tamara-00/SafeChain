@@ -1,170 +1,243 @@
-# 🔗 SafeChain MK — Anti-Phishing Traffic Fine Portal
+<div align="center">
 
-## 🏆 1st Place Winner — Blockchain Hackathon Skopje 2026
+**Универзитет „Св. Кирил и Методиј“ во Скопје**
+**Факултет за информатички науки и компјутерско инженерство**
 
-## Links
+Предмет: *Континуирана интеграција и испорака*
+Елаборат за проектна задача
 
-- [📺 Project Video](https://www.youtube.com/watch?v=XGbPdhdkXjQ)
-- [📊 Presentation](https://safe-chain-presentation.vercel.app/)
+## CI/CD Pipeline и Kubernetes оркестрација на SafeChain MK
 
-## Overview
+Студент: **Тамара Стојаноска**, бр. на индекс **231030**
+Професор: проф. д-р Панче Рибарски
+Асистенти: Стефан Андонов, Дарко Сасански, Димитар Милески
 
-A Solana blockchain application that hardens North Macedonia's **Safe City** traffic
-enforcement system against the wave of phishing SMS scams targeting drivers.
+</div>
 
-## The problem
+---
 
-Citizens receive SMS messages claiming a traffic violation. Scammers exploit this by
-sending near-identical fake messages containing **malicious links** that lead to
-credential and payment-stealing sites.
+Апликацијата (SafeChain MK — Anti-Phishing Traffic Fine Portal) потекнува од оригиналниот проект: **[github.com/tamara-00/Blockchain-Hackathon-2026](https://github.com/tamara-00/Blockchain-Hackathon-2026)**.
 
-A *legitimate* message looks like this:
+---
 
-> SafeChain MK: Детектиран е сообраќаен прекршок за вашето возило на 15.05.2026 во
-> 18:42 часот. … Безбедносен код: **SC-8F3A2B91C7D4** … Не отворајте линкови од
-> непознати испраќачи.
+# МАКЕДОНСКИ
 
-## The solution — anti-phishing by design
+## За репозиториумот
 
-The core insight: **the legitimate flow never contains a link.**
+Ова репо е моја самостојна проектна задача по предметот *Континуирана интеграција и испорака* — целосна докеризација, Kubernetes оркестрација и CI/CD pipeline на постоечката апликација SafeChain MK, плус миграција на бекендот од Supabase на самостојно хостирана MongoDB.
 
-1. The official SMS carries only a **security code** and never a URL.
-2. The citizen opens the official portal **manually**, logging into their account via email.
-3. They can enter the code to see if the violation is real.
-4. If the violation is real it is stored as an NFT with 4 status messages: Payed, Unpayed, Appeal Pending and Voided.
-5. The user can view the evidence, submit an appeal and pay the fine.
-6. They pay the fine either through an official non-crypto payment route or
-   **on the Solana blockchain** — transparently and verifiably.
+## Од Supabase кон MongoDB
 
-Because there is never a link to click, any phishing SMS with a link is *self-evidently*
-fake. The app teaches this model and reinforces it throughout the UI.
+Пред докеризацијата, прво го мигрирав бекендот од Supabase (Postgres + нивен hosted REST/auth слој) на самостојно хостирана MongoDB — потребно за да можам целосно да ја демонстрирам CI/CD → контејнеризација → оркестрација низата, без зависност од трет BaaS сервис за податочниот слој.
 
-## How the blockchain is used
+| Фајл | Што содржи |
+|---|---|
+| `backend/src/mongo.js` | Адаптер кој ги заменува старите Supabase повици со Mongoose query-и, со ист интерфејс кон остатокот од бекендот |
+| `backend/src/db/connection.js` | Mongoose конекција кон MongoDB (`connectMongo`, `hasMongo`) |
+| `backend/src/db/models.js` | Mongoose шеми/модели `Violation` и `Payment` |
+| `.env.example` | `MONGODB_URI`, `MONGODB_DB_NAME` наместо старите `SUPABASE_URL`/`SUPABASE_*_KEY` |
 
-Paying with crypto is a **real Solana transaction** (devnet):
+## Докеризација — што направив и кои фајлови
 
-- A SOL transfer from the citizen's wallet to the SafeChain treasury account.
-- A **Memo instruction** that stores an encrypted payment payload on-chain.
-- The confirmed transaction signature becomes an **immutable, publicly verifiable receipt** — anyone can check it on Solana Explorer.
-- **Violation NFTs**: SafeChain leverages **Non-Fungible Tokens (NFTs)** to manage violation records, creating an immutable, tamper-proof history of traffic offenses.
+| Фајл | Што прави |
+|---|---|
+| `backend/Dockerfile` | Multi-stage build за Node бекендот (builder стадиум → продукциски стадиум со `node:20-alpine`), вграден `HEALTHCHECK` на `/api/health` |
+| `frontend/Dockerfile` | Multi-stage build: Node builder го прави `npm run build`, продукцискиот стадиум е `nginx:1.27-alpine` кој ги сервира статичките фајлови; прима `ARG VITE_THIRDWEB_CLIENT_ID` за да го вгради во build-от (Vite build-time променливи) |
+| `frontend/nginx.conf.template` | nginx конфигурација (envsubst темплејт) — сервира статички фајлови на `/` и проксира `/api/*` кон backend контејнерот |
+| `.dockerignore`, `backend/.dockerignore` | Исклучуваат `node_modules`, `.env`, `.git` итн. од build контекстот |
+| `docker-compose.yml` | Ги орекстрира сите три сервиси (детали подолу) |
+| `.env.example` | Сите потребни env променливи документирани (без реални тајни) |
 
-No custom on-chain program is needed: the app uses Solana's native System and Memo programs, which keeps it reliable and trustless. The memo payload is encrypted by the backend with AES-256-GCM before the wallet signs. Each violation record also carries a **SHA-256 fingerprint**, displayed in the app for integrity verification.
+### `docker-compose.yml` — детали
 
-## Features
-
-- Single security-code entry that mirrors the SMS flow exactly.
-- Transparent violation evidence — traffic-camera capture, ANPR plate recognition, and a location map.
-- Real Macedonian fine prices in EUR, converted to MKD, with the 50% early-payment deduction for the first 8 days.
-- Non-crypto payment path backed by the backend/database.
-- On-chain fine payment via a Solana wallet, with an explorer-verifiable receipt and encrypted memo.
-- PDF Appeal generator with an online signature that gets sent directly to the Minestry of internal affairs.
-- Violations stored as NFTs.
-
-## Tech stack
-
-- React + TypeScript + Vite
-- Tailwind CSS
-- `@solana/web3.js` + Solana Wallet Adapter + SPL Memo
-- Node HTTP backend
-- Self-hosted MongoDB (Mongoose)
-- Solana **devnet**
-
-## Running locally
+- **Три сервиси**: `frontend`, `backend`, `mongodb`
+- **Именуван volume** за MongoDB (`safechain_mongodb_data:/data/db`) — податоците преживуваат `docker compose down` (се бришат само со `-v`)
+- **`backend` чека `mongodb` да е healthy** пред да старта (`depends_on: condition: service_healthy`, преку `mongosh --eval "db.adminCommand('ping')"` healthcheck)
+- **Сите env вредности од `.env`** — ништо не е hardcode-увано во compose фајлот
+- **Сопствена bridge мрежа** (`safechain-network`) со имиња на сервисите за DNS резолуција меѓу контејнерите
+- **`restart: unless-stopped`** на сите сервиси
+- **Изложен е само `frontend`** (`localhost:8080`) — `backend` и `mongodb` се достапни само внатрешно
 
 ```bash
-npm install
-npm run dev:backend
+cp .env.example .env
+docker compose up --build
+docker compose exec backend node src/seed-demo.js   # сидување демо податоци
 ```
 
-In another terminal:
+## Kubernetes — што направив и кои фајлови
+
+Сите манифести се во `k8s/`, секој со коментари во самиот фајл зошто е избрана таа конфигурација:
+
+| Фајл | Ресурс | Улога |
+|---|---|---|
+| `k8s/namespace.yaml` | `Namespace` | `safechain-mk` — изолација на сите ресурси |
+| `k8s/mongo-secret.yaml` | `Secret` | MongoDB root credentials |
+| `k8s/mongo-configmap.yaml` | `ConfigMap` | Име на база, порт (не-чувствителни вредности) |
+| `k8s/mongo-service.yaml` | `Service` (headless) | `clusterIP: None` — стабилно per-pod DNS за StatefulSet-от |
+| `k8s/mongo-statefulset.yaml` | `StatefulSet` | MongoDB со `volumeClaimTemplates` (PVC по под), readiness/liveness probes, resource limits |
+| `k8s/backend-secret.yaml` | `Secret` | `MONGODB_URI`, `SECURITY_CODE_PEPPER`, `MEMO_ENCRYPTION_KEY`, `ADMIN_TOKEN` |
+| `k8s/backend-configmap.yaml` | `ConfigMap` | Порт, `NODE_ENV`, не-чувствителни нагодувања |
+| `k8s/backend-deployment.yaml` | `Deployment` | 2 реплики, `envFrom` Secret+ConfigMap, probes на `/api/health` |
+| `k8s/backend-service.yaml` | `Service` (ClusterIP) | Само внатрешно достапен |
+| `k8s/frontend-deployment.yaml` | `Deployment` | 2 реплики на frontend имиџот |
+| `k8s/frontend-service.yaml` | `Service` (ClusterIP) | Само внатрешно достапен |
+| `k8s/ingress.yaml` | `Ingress` | `/api` → backend, `/` → frontend |
 
 ```bash
-npm run dev:frontend
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/mongo-secret.yaml -f k8s/mongo-configmap.yaml \
+               -f k8s/backend-secret.yaml -f k8s/backend-configmap.yaml
+kubectl apply -f k8s/mongo-service.yaml -f k8s/mongo-statefulset.yaml \
+               -f k8s/backend-deployment.yaml -f k8s/backend-service.yaml \
+               -f k8s/frontend-deployment.yaml -f k8s/frontend-service.yaml
+kubectl apply -f k8s/ingress.yaml
+
+kubectl get pods -n safechain-mk
+kubectl get pvc -n safechain-mk
 ```
 
-Then open the printed frontend URL (default http://localhost:5173). The Vite dev
-server proxies `/api` to the backend at http://127.0.0.1:8787.
+Тестирано и против Docker Desktop Kubernetes (локално) и против ефемерен `kind` кластер во CI.
 
-Production build: `npm run build`, then `npm run preview`.
+## CI/CD Pipeline — што направив
 
-## MongoDB setup
+Фајл: `.github/workflows/ci-cd.yml` — два job-а:
 
-The backend reads `.env.local` / `.env` and connects to MongoDB via Mongoose using
-`MONGODB_URI` (defaults to `mongodb://127.0.0.1:27017/safecity_mk` for local development).
-Collections and validation are defined in [`backend/src/db/models.js`](backend/src/db/models.js) —
-no manual schema step is required, Mongoose creates the collections on first write.
+1. **`build-and-push`** (matrix: frontend + backend) — checkout, build на секој Docker имиџ со Buildx (GitHub Actions cache за побрзи build-ови), tag со `:latest` и `:<git-sha>` (traceability), push на DockerHub. На `push` кон `main` build-ира и push-ира; на `pull_request` само build-ира (без push).
+2. **`deploy-to-kubernetes`** — по успешен push на двата имиџа, крева ефемерен `kind` (Kubernetes-in-Docker) кластер на самиот runner, ги патчира image таговите во `k8s/` манифестите на новиот `:<git-sha>`, ги applly-ира (прво namespace, потоа сè друго), чека StatefulSet + двата Deployment-и да завршат rollout, и на крај прави smoke test на `/api/health` преку Ingress. Секој неуспешен чекор го пропаѓа целиот pipeline со целосен лог.
 
-1. Run a local MongoDB instance (e.g. `mongod` or `docker run -p 27017:27017 mongo`), or
-   point `MONGODB_URI` at a self-hosted/StatefulSet MongoDB deployment.
-2. Seed the demo violations:
+Потребни GitHub Secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `VITE_THIRDWEB_CLIENT_ID`.
+
+## Проектна структура (докер/k8s/CI делови)
+
+```
+docker-compose.yml         Локален 3-контејнерски стек
+frontend/Dockerfile        Multi-stage build за frontend
+backend/Dockerfile         Multi-stage build за backend
+frontend/nginx.conf.template   nginx конфигурација (proxy кон backend)
+k8s/                       Kubernetes манифести (namespace, secrets/configmaps,
+                            StatefulSet, Deployments, Services, Ingress)
+.github/workflows/ci-cd.yml   GitHub Actions CI/CD pipeline
+backend/src/mongo.js       MongoDB адаптер (Mongoose)
+backend/src/db/            Mongoose конекција + шеми
+```
+
+---
+
+# ENGLISH
+
+## What this repository is
+
+This repo is my individual project assignment for the *Continuous Integration and
+Delivery* course — full dockerization, Kubernetes orchestration, and a CI/CD
+pipeline for the existing SafeChain MK application, plus migrating the backend from
+Supabase to a self-hosted MongoDB.
+
+## From Supabase to MongoDB
+
+Before dockerizing, I first migrated the backend from Supabase (Postgres + its
+hosted REST/auth layer) to a self-hosted MongoDB — needed so the full
+CI/CD → containerization → orchestration pipeline could be demonstrated end to end
+without depending on a third-party BaaS for the data layer.
+
+| File | What it contains |
+|---|---|
+| `backend/src/mongo.js` | Adapter that replaces the old Supabase calls with Mongoose queries, same interface as the rest of the backend |
+| `backend/src/db/connection.js` | Mongoose connection to MongoDB (`connectMongo`, `hasMongo`) |
+| `backend/src/db/models.js` | Mongoose schemas/models `Violation` and `Payment` |
+| `.env.example` | `MONGODB_URI`, `MONGODB_DB_NAME` in place of the old `SUPABASE_URL`/`SUPABASE_*_KEY` |
+
+## Dockerization — what I built and which files
+
+| File | What it does |
+|---|---|
+| `backend/Dockerfile` | Multi-stage build for the Node backend (builder stage → production stage on `node:20-alpine`), with a built-in `HEALTHCHECK` on `/api/health` |
+| `frontend/Dockerfile` | Multi-stage build: a Node builder runs `npm run build`, the production stage is `nginx:1.27-alpine` serving the static files; accepts `ARG VITE_THIRDWEB_CLIENT_ID` to inline it at build time (Vite build-time variable) |
+| `frontend/nginx.conf.template` | nginx config (envsubst template) — serves static files at `/` and proxies `/api/*` to the backend container |
+| `.dockerignore`, `backend/.dockerignore` | Exclude `node_modules`, `.env`, `.git`, etc. from the build context |
+| `docker-compose.yml` | Orchestrates all three services (details below) |
+| `.env.example` | Every required env variable documented (no real secrets) |
+
+### `docker-compose.yml` details
+
+- **Three services**: `frontend`, `backend`, `mongodb`
+- **Named volume** for MongoDB (`safechain_mongodb_data:/data/db`) — data survives `docker compose down` (only removed with `-v`)
+- **`backend` waits for `mongodb` to be healthy** before starting (`depends_on: condition: service_healthy`, via a `mongosh --eval "db.adminCommand('ping')"` healthcheck)
+- **All values sourced from `.env`** — nothing hardcoded in the compose file
+- **Custom bridge network** (`safechain-network`) with service names for DNS resolution between containers
+- **`restart: unless-stopped`** on every service
+- **Only `frontend` is exposed** (`localhost:8080`) — `backend` and `mongodb` are internal-only
 
 ```bash
-npm run db:seed
+cp .env.example .env
+docker compose up --build
+docker compose exec backend node src/seed-demo.js   # seed demo data
 ```
 
-If MongoDB is unreachable, the backend intentionally falls back to the bundled demo
-records and an ignored local payment store under `backend/.data/` so the app remains
-usable during local development. `/api/health` reports whether MongoDB is configured and
-reachable.
+## Kubernetes — what I built and which files
 
-## Demo security codes
+All manifests live in `k8s/`, each commented in-file with the reasoning behind that
+configuration choice:
 
-The portal can read from MongoDB through the backend. Four demonstration records are
-also bundled and can be seeded to MongoDB. Enter any of these codes — the first one
-matches the example SMS:
+| File | Resource | Role |
+|---|---|---|
+| `k8s/namespace.yaml` | `Namespace` | `safechain-mk` — isolates all resources |
+| `k8s/mongo-secret.yaml` | `Secret` | MongoDB root credentials |
+| `k8s/mongo-configmap.yaml` | `ConfigMap` | Database name, port (non-sensitive values) |
+| `k8s/mongo-service.yaml` | `Service` (headless) | `clusterIP: None` — stable per-pod DNS for the StatefulSet |
+| `k8s/mongo-statefulset.yaml` | `StatefulSet` | MongoDB with `volumeClaimTemplates` (a PVC per pod), readiness/liveness probes, resource limits |
+| `k8s/backend-secret.yaml` | `Secret` | `MONGODB_URI`, `SECURITY_CODE_PEPPER`, `MEMO_ENCRYPTION_KEY`, `ADMIN_TOKEN` |
+| `k8s/backend-configmap.yaml` | `ConfigMap` | Port, `NODE_ENV`, other non-sensitive settings |
+| `k8s/backend-deployment.yaml` | `Deployment` | 2 replicas, `envFrom` Secret+ConfigMap, probes on `/api/health` |
+| `k8s/backend-service.yaml` | `Service` (ClusterIP) | Internal-only |
+| `k8s/frontend-deployment.yaml` | `Deployment` | 2 replicas of the frontend image |
+| `k8s/frontend-service.yaml` | `Service` (ClusterIP) | Internal-only |
+| `k8s/ingress.yaml` | `Ingress` | `/api` → backend, `/` → frontend |
 
-| Code | Violation | Discount |
-|------|-----------|----------|
-| `SC-8F3A2B91C7D4` | Speeding — Партизанска, Скопје | active |
-| `SC-2E7D9A4F1B60` | Running a red light — Бул. Илинден, Скопје | active |
-| `SC-5C1B8E3A9F22` | Expired registration — Бул. Кузман Ј. Питу, Скопје | active |
-| `SC-9A4D2F8E1C36` | Illegal parking — Плоштад Македонија, Скопје | active |
-| `SC-A1B2C3D4E5F6` | Speeding up to 20 km/h over — Бул. Србија, Скопје | active |
-| `SC-B7C8D9E0F1A2` | Speeding 30-50 km/h over — Бул. Борис Трајковски, Скопје | active |
-| `SC-C3D4E5F6A7B8` | Speeding 50+ km/h over — Бул. Александар Македонски, Скопје | active |
-| `SC-D9E8F7A6B5C4` | Obstructing parking — Ул. Димитрие Чуповски, Скопје | active |
-| `SC-E1F2A3B4C5D6` | Disabled-space parking — Кеј 13 Ноември, Скопје | active |
-| `SC-F2A3B4C5D6E7` | Speeding — Кеј Маршал Тито, **Охрид** | active |
-| `SC-1C2D3E4F5A6B` | Red light + ban — Бул. 1 Мај, **Битола** | **expired** |
-| `SC-3A4B5C6D7E8F` | Expired registration — Ул. Индустриска, **Куманово** | **expired** |
-| `SC-6B7C8D9E0F1A` | Disabled-space parking — Бул. Илинден, **Тетово** | active |
-| `SC-7C8D9E0F1A2B` | Heavy speeding on A1 — **Велес** | active |
-| `SC-8D9E0F1A2B3C` | 50+ km/h over + points — Ул. Кичевска, **Гостивар** | **expired** |
+```bash
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/mongo-secret.yaml -f k8s/mongo-configmap.yaml \
+               -f k8s/backend-secret.yaml -f k8s/backend-configmap.yaml
+kubectl apply -f k8s/mongo-service.yaml -f k8s/mongo-statefulset.yaml \
+               -f k8s/backend-deployment.yaml -f k8s/backend-service.yaml \
+               -f k8s/frontend-deployment.yaml -f k8s/frontend-service.yaml
+kubectl apply -f k8s/ingress.yaml
 
-## Paying a fine (devnet)
-
-To exercise the real on-chain payment:
-
-1. Install a Solana wallet — e.g. [Phantom](https://phantom.app).
-2. Switch the wallet to **Devnet** (Settings → Developer Settings).
-3. Fund it with free devnet SOL from <https://faucet.solana.com>.
-4. Open a violation, connect the wallet, and click **Pay**.
-5. Approve the transaction; the app shows the confirmed signature and a link to
-   verify it on Solana Explorer.
-
-Fines use a demo devnet rate (1 SOL = 100,000 MKD) so payable amounts stay tiny.
-
-## Project structure
-
-```
-frontend/
-  src/
-    data/violations.ts   demo violation records + real pricing rules
-    i18n/                Macedonian/English/Serbian Cyrillic strings + language context
-    solana/              devnet config, wallet provider, fine payment
-    lib/                 API client, hashing, formatting, local payment cache
-    components/          header, evidence SVGs, panels, icons
-    pages/               Home, ViolationView
-backend/
-  src/                   API server, pricing, encrypted memos
-  src/mongo.js           MongoDB adapter (Mongoose queries, same interface the API server calls)
-  src/db/                Mongoose connection + schemas (violations, payments)
+kubectl get pods -n safechain-mk
+kubectl get pvc -n safechain-mk
 ```
 
-## Team
+Tested against both Docker Desktop Kubernetes (local) and a disposable `kind`
+cluster in CI.
 
-- Ognen Mladenovski - FINKI
-- Hristina Gjorgjievska - FINKI
-- Dragan Stojchevski - Brainster NEXT
-- Tamara Stojanoska - FINKI
-- Sara Andonovska - FINKI
+## CI/CD Pipeline — what I built
+
+File: `.github/workflows/ci-cd.yml` — two jobs:
+
+1. **`build-and-push`** (matrix: frontend + backend) — checks out the code, builds
+   each Docker image with Buildx (GitHub Actions cache for faster rebuilds), tags it
+   `:latest` and `:<git-sha>` for traceability, and pushes to DockerHub. On a push
+   to `main` it builds and pushes; on a pull request it only builds (never pushes).
+2. **`deploy-to-kubernetes`** — runs only after both images are pushed
+   successfully. Spins up a disposable `kind` (Kubernetes-in-Docker) cluster on the
+   runner itself, patches the image tags in the `k8s/` manifests to the freshly
+   built `:<git-sha>`, applies them (namespace first, everything else after), waits
+   for the MongoDB StatefulSet and both Deployments to report a successful rollout,
+   then smoke-tests `/api/health` through the cluster's Ingress. Any failing step
+   fails the whole pipeline with full logs.
+
+Required GitHub Secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`,
+`VITE_THIRDWEB_CLIENT_ID`.
+
+## Project structure (Docker/K8s/CI parts)
+
+```
+docker-compose.yml         Local 3-container stack
+frontend/Dockerfile        Multi-stage build for the frontend
+backend/Dockerfile         Multi-stage build for the backend
+frontend/nginx.conf.template   nginx config (proxies to the backend)
+k8s/                       Kubernetes manifests (namespace, secrets/configmaps,
+                            StatefulSet, Deployments, Services, Ingress)
+.github/workflows/ci-cd.yml   GitHub Actions CI/CD pipeline
+backend/src/mongo.js       MongoDB adapter (Mongoose)
+backend/src/db/            Mongoose connection + schemas
+```
