@@ -43,6 +43,8 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      args:
+        VITE_THIRDWEB_CLIENT_ID: ${VITE_THIRDWEB_CLIENT_ID}
     container_name: safechain-frontend
     restart: unless-stopped
     environment:
