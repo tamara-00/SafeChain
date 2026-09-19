@@ -1,0 +1,17 @@
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: safechain-mongo-headless
+  namespace: safechain-mk
+  labels:
+    app.kubernetes.io/name: safechain-mongo
+    app.kubernetes.io/part-of: safechain-mk
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: safechain-mongo
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017

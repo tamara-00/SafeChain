@@ -1,0 +1,55 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: safechain-backend
+  namespace: safechain-mk
+  labels:
+    app.kubernetes.io/name: safechain-backend
+    app.kubernetes.io/part-of: safechain-mk
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: safechain-backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: safechain-backend
+        app.kubernetes.io/part-of: safechain-mk
+    spec:
+      containers:
+        - name: safechain-backend
+          image: tamara0/safechain-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8787
+          envFrom:
+            - configMapRef:
+                name: safechain-backend-config
+            - secretRef:
+                name: safechain-backend-secrets
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8787
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8787
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
