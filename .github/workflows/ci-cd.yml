@@ -61,8 +61,9 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
 
 
+
   deploy-to-kubernetes:
-    name: Deploy to Kubernetes
+    name: Deploy to Kubernetes (CD)
     needs: build-and-push
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -73,19 +74,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install yq
-        run: |
-          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
-          sudo chmod +x /usr/local/bin/yq
+      - name: Create ephemeral kind Kubernetes cluster
+        uses: helm/kind-action@v1.10.0
+        with:
+          cluster_name: safechain-ci
+          wait: 90s
 
       - name: Install kubectl
         uses: azure/setup-kubectl@v4
 
-      - name: Configure kubeconfig
+      - name: Install yq
         run: |
-          mkdir -p "$HOME/.kube"
-          echo "${{ secrets.KUBECONFIG }}" > "$HOME/.kube/config"
-          chmod 600 "$HOME/.kube/config"
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
 
       - name: Update image tags in Kubernetes manifests
         run: |
@@ -94,17 +95,17 @@ jobs:
 
       - name: Apply manifests to the cluster
         run: |
-          # namespace.yaml мора да се applly-ира ПРВ и одделно: секој друг
-          # манифест во k8s/ експлицитно наведува `metadata.namespace:
-          # safechain-mk`, па namespace-от мора веќе да постои пред нив.
-          # `kubectl apply -f k8s/` не гарантира дека namespace.yaml ќе се
-          # обработи прв само затоа што е во истата папка (редоследот на
-          # обработка на фајлови во директориум не е гарантиран), затоа е
-          # издвоен во сопствен, повторлив (idempotent) чекор.
           kubectl apply -f k8s/namespace.yaml
           kubectl apply -f k8s/
 
       - name: Verify rollout
         run: |
-          kubectl rollout status deployment/safechain-backend -n safechain-mk --timeout=120s
-          kubectl rollout status deployment/safechain-frontend -n safechain-mk --timeout=120s
+          kubectl rollout status statefulset/safechain-mongo -n safechain-mk --timeout=180s
+          kubectl rollout status deployment/safechain-backend -n safechain-mk --timeout=180s
+          kubectl rollout status deployment/safechain-frontend -n safechain-mk --timeout=180s
+
+      - name: Smoke test the deployed app
+        run: |
+          kubectl -n safechain-mk port-forward svc/safechain-frontend 8080:8080 &
+          sleep 5
+          curl -sf http://127.0.0.1:8080/api/health
