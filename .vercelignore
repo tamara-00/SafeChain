@@ -1,0 +1,8 @@
+# The Node backend is intentionally NOT deployed on Vercel (it's hosted
+# separately on Render — see .env.example / README). Excluding it here stops
+# Vercel's project-setup scanner from detecting it as a second "service"
+# (alongside the Vite frontend) and erroring on the existing top-level
+# vercel.json, which is written for a plain single-project deployment.
+backend/
+k8s/
+.github/
