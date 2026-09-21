@@ -10,16 +10,11 @@ RUN npm ci
 COPY tsconfig.json vite.config.ts tailwind.config.js postcss.config.js ./
 COPY frontend ./frontend
 
-# Vite inlines VITE_-prefixed vars into the JS bundle at build time (not
-# runtime), so they must arrive as build ARGs here — a plain docker-compose
-# "environment:" on the container would be too late, the bundle is already
-# built by then.
 ARG VITE_THIRDWEB_CLIENT_ID
 ENV VITE_THIRDWEB_CLIENT_ID=$VITE_THIRDWEB_CLIENT_ID
 
 RUN npm run build
 
-# --- production stage ---
 FROM nginx:1.27-alpine AS production
 
 ENV BACKEND_HOST=backend \
