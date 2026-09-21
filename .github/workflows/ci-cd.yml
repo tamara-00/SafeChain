@@ -57,10 +57,6 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}:${{ github.sha }}
-          # Vite inlines VITE_-prefixed vars into the JS bundle at build time,
-          # so the thirdweb client ID must arrive as a build ARG (matches
-          # frontend/Dockerfile's ARG VITE_THIRDWEB_CLIENT_ID). Harmless no-op
-          # for the backend image, which doesn't declare/use that ARG.
           build-args: |
             VITE_THIRDWEB_CLIENT_ID=${{ secrets.VITE_THIRDWEB_CLIENT_ID }}
           cache-from: type=gha,scope=${{ matrix.name }}
