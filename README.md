@@ -25,11 +25,11 @@
 
 ## За репозиториумот
 
-Ова репо е моја самостојна проектна задача по предметот *Континуирана интеграција и испорака* — целосна докеризација, Kubernetes оркестрација и CI/CD pipeline на постоечката апликација SafeChain MK, плус миграција на бекендот од Supabase на самостојно хостирана MongoDB.
+Ова репо е моја самостојна проектна задача по предметот *Континуирана интеграција и испорака* - целосна докеризација, Kubernetes оркестрација и CI/CD pipeline на постоечката апликација SafeChain MK, плус миграција на бекендот од Supabase на самостојно хостирана MongoDB.
 
 ## Од Supabase кон MongoDB
 
-Пред докеризацијата, прво го мигрирав бекендот од Supabase (Postgres + нивен hosted REST/auth слој) на самостојно хостирана MongoDB — потребно за да можам целосно да ја демонстрирам CI/CD → контејнеризација → оркестрација низата, без зависност од трет BaaS сервис за податочниот слој.
+Пред докеризацијата, прво го мигрирав бекендот од Supabase (Postgres + нивен hosted REST/auth слој) на самостојно хостирана MongoDB - потребно за да можам целосно да ја демонстрирам CI/CD → контејнеризација → оркестрација низата, без зависност од трет BaaS сервис за податочниот слој.
 
 | Фајл | Што содржи |
 |---|---|
@@ -54,7 +54,7 @@
 - **Три сервиси**: `frontend`, `backend`, `mongodb`
 - **Именуван volume** за MongoDB (`safechain_mongodb_data:/data/db`) — податоците преживуваат `docker compose down` (се бришат само со `-v`)
 - **`backend` чека `mongodb` да е healthy** пред да старта (`depends_on: condition: service_healthy`, преку `mongosh --eval "db.adminCommand('ping')"` healthcheck)
-- **Сите env вредности од `.env`** — ништо не е hardcode-увано во compose фајлот
+- **Сите env вредности од `.env`** — ништо не е hardcode-ирано во compose фајлот
 - **Сопствена bridge мрежа** (`safechain-network`) со имиња на сервисите за DNS резолуција меѓу контејнерите
 - **`restart: unless-stopped`** на сите сервиси
 - **Изложен е само `frontend`** (`localhost:8080`) — `backend` и `mongodb` се достапни само внатрешно
@@ -62,7 +62,7 @@
 ```bash
 cp .env.example .env
 docker compose up --build
-docker compose exec backend node src/seed-demo.js   # сидување демо податоци
+docker compose exec backend node src/seed-demo.js   # seeding на демо податоци
 ```
 
 ## Kubernetes — што направив и кои фајлови
