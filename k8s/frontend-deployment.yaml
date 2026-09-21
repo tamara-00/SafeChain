@@ -1,22 +1,4 @@
-# Deployment за frontend-от (nginx-от од frontend/Dockerfile, кој сервира
-# статичкиот React build и проксира /api/* кон backend-от преку
-# frontend/nginx.conf.template).
-#
-# Исто како backend-от: stateless статички фајлови + reverse-proxy
-# конфигурација, нема локална состојба, па Deployment (не StatefulSet) е
-# точниот избор.
-#
-# ⚠️ .github/workflows/ci-cd.yml исто го патчира ова image полето со `yq` при
-# секој push на main — frontend контејнерот мора да остане ПРВИОТ во
-# containers листата.
-#
-# Нема одделен frontend-configmap.yaml фајл: единствените "runtime нагодувања"
-# што nginx-от ги бара се BACKEND_HOST/BACKEND_PORT подолу (env-от што
-# nginx-овиот envsubst влезен скрипт ги користи за да го генерира
-# /etc/nginx/conf.d/default.conf при старт — см. frontend/nginx.conf.template
-# и frontend/Dockerfile). Тие само го огледуваат името/портот на
-# backend-service.yaml дефинирани тука веднаш подолу, па засебен ConfigMap
-# фајл само за две вредности би бил непотребна индирекција.
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
