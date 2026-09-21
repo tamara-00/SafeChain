@@ -27,6 +27,8 @@
 
 Ова репо е моја самостојна проектна задача по предметот *Континуирана интеграција и испорака* - целосна докеризација, Kubernetes оркестрација и CI/CD pipeline на постоечката апликација SafeChain MK, плус миграција на бекендот од Supabase на самостојно хостирана MongoDB.
 
+Деплојната на рендер: https://safechain-1-wo4o.onrender.com
+
 ## Од Supabase кон MongoDB
 
 Пред докеризацијата, прво го мигрирав бекендот од Supabase (Postgres + нивен hosted REST/auth слој) на самостојно хостирана MongoDB - потребно за да можам целосно да ја демонстрирам CI/CD → контејнеризација → оркестрација низата, без зависност од трет BaaS сервис за податочниот слој.
@@ -132,6 +134,8 @@ This repo is my individual project assignment for the *Continuous Integration an
 Delivery* course — full dockerization, Kubernetes orchestration, and a CI/CD
 pipeline for the existing SafeChain MK application, plus migrating the backend from
 Supabase to a self-hosted MongoDB.
+
+Deployed on render: https://safechain-1-wo4o.onrender.com
 
 ## From Supabase to MongoDB
 
